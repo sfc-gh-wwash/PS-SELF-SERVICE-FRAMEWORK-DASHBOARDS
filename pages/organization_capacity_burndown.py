@@ -10,9 +10,280 @@ import pandas as pd
 # import app pages
 # from sql.org_billable_credits import org_billable_usage
 
-
 from plotly.subplots import make_subplots
 session = get_active_session()
 
 def org_capacity_burndown():
+    st_date_sql = """
+    SELECT start_date
+    FROM snowflake.ORGANIZATION_USAGE.CONTRACT_ITEMS
+    WHERE start_date < CURRENT_DATE
+    UNION select '2023-03-10'::date
+    ORDER BY start_date DESC LIMIT 2;
+    """
     
+    # Execute the query and convert to pandas
+    dates_df = session.sql(st_date_sql).to_pandas()
+    
+    # Create dropdown with the dates
+    selected_date = str(st.selectbox(
+        "Select Start Date",
+        options=dates_df['START_DATE'].tolist(),
+        format_func=lambda x: x.strftime('%Y-%m-%d')
+    ))
+
+    
+
+    burndown_sql = """
+    WITH
+    contract_start AS
+    (
+    -- This query is required to allow filters to use >= against Dashboard Filters
+    SELECT start_date, DATE_TRUNC('month',start_date) AS start_date_bom
+    FROM snowflake.ORGANIZATION_USAGE.CONTRACT_ITEMS
+    WHERE start_date = '""" + selected_date + """'
+    LIMIT 1
+    )
+    ,
+    capacity_period AS
+    (
+    -- This eliminates overlaps in the contract dates which would cause cartesian joins
+    -- Eliminates gaps between the contract dates by getting the next start date
+    -- Sums up overlapping contract amounts, adjusts end dates to not overlap with next start date
+    SELECT
+    contract_number,
+    start_date AS cap_start_date,
+    DATE_TRUNC('month',start_date) as cap_start_date_bom,
+    currency, MAX(end_date) AS end_date, MAX(cap_end_date) AS cap_end_date,
+    DATE_TRUNC('month', MAX(cap_end_date)) as cap_end_date_bom,
+    SUM(amount) AS capacity_amount
+    , max(DATE_TRUNC('month', convert_timezone('UTC',cap_end_date)))::DATE carryforward_month,
+    add_months(carryforward_month,0) AS carryforward_applied_to_month
+    FROM
+    (
+    SELECT contract_number, start_date, end_date,
+    LEAD(start_date) OVER ( ORDER BY START_DATE) AS next_start_date,
+    CASE WHEN next_start_date <= end_date THEN next_start_date -1 ELSE end_date END AS cap_end_date,
+    currency, amount
+    FROM snowflake.ORGANIZATION_USAGE.CONTRACT_ITEMS
+    )
+    GROUP BY 1,2,3,4
+    ORDER BY start_date
+    )
+    ,
+    storage_usage AS
+    (
+    SELECT
+    DATE_TRUNC('month', usage_date)::DATE AS storage_usage_month,
+    --DATE_TRUNC('day', usage_date)::DATE AS storage_usage_month,
+    ((SUM(average_bytes) / POWER(2, 40)) / POWER(2, 40)) / 30 AS storage_tb,
+    ROUND(SUM(credits) * avg(ppc.effective_rate)) AS storage_used
+    FROM snowflake.organization_usage.storage_daily_history sdh
+    LEFT JOIN SNOWFLAKE.ORGANIZATION_USAGE.rate_sheet_daily ppc ON usage_date = ppc.date AND ppc.usage_type = 'compute' AND ppc.account_name = sdh.account_name
+    GROUP BY 1
+    )
+    ,
+    monthly_usage AS
+    (
+    SELECT
+    DATE_TRUNC('month', usage_date)::DATE AS usage_month,
+    --DATE_TRUNC('day', usage_date)::DATE AS usage_month,
+    ROUND(SUM(credits_used_compute)) AS credits_used,
+    ROUND(SUM(credits_used_cloud_services * ppc.effective_rate) +SUM(credits_adjustment_cloud_services * ppc.effective_rate)) AS cs_adj_used,
+    ROUND(SUM(CASE WHEN mdh.service_type = 'WAREHOUSE_METERING' THEN credits_used_compute * ppc.effective_rate ELSE 0 END)) AS compute_used,
+    ROUND(SUM(CASE WHEN mdh.service_type = 'REPLICATION' THEN credits_used_compute * ppc.effective_rate ELSE 0 END)) AS replication_used,
+    ROUND(SUM(CASE WHEN mdh.service_type = 'AUTOMATIC_CLUSTERING' THEN credits_used_compute * ppc.effective_rate ELSE 0 END)) AS auto_clustering_used,
+    ROUND(SUM(CASE WHEN mdh.service_type = 'PIPE' THEN credits_used_compute * ppc.effective_rate ELSE 0 END)) AS pipe_used,
+    ROUND(SUM(CASE WHEN mdh.service_type = 'MATERIALIZED_VIEW' THEN credits_used_compute * ppc.effective_rate ELSE 0 END)) AS materialized_view_used,
+    ROUND(SUM(CASE WHEN mdh.service_type = 'SEARCH_OPTIMIZATION' THEN credits_used_compute * ppc.effective_rate ELSE 0 END)) AS search_optimization_used
+    FROM SNOWFLAKE.ORGANIZATION_USAGE.METERING_DAILY_HISTORY mdh
+    LEFT JOIN contract_start cs ON cs.start_date_bom >= DATE_TRUNC('month', convert_timezone('UTC',usage_date))::DATE
+    LEFT JOIN SNOWFLAKE.ORGANIZATION_USAGE.rate_sheet_daily ppc ON mdh.usage_date = ppc.date AND ppc.usage_type = 'compute' AND ppc.account_name = mdh.account_name
+    WHERE USAGE_DATE < DATE_TRUNC('day', CONVERT_TIMEZONE('UTC', CURRENT_TIMESTAMP))
+    GROUP BY 1
+    ORDER BY 1
+    )
+    ,
+    carryforward_capacity_periods AS
+    -- This query determines the carryforward that gets applied to next start date
+    (
+    SELECT carryforward_month, carryforward_applied_to_month, cap_start_date, cap_end_date, contract_number
+    FROM
+    (
+    SELECT carryforward_month, carryforward_applied_to_month, cap_start_date, cap_end_date, contract_number ,
+    rank() OVER(ORDER BY carryforward_month DESC) AS cf_rank
+    FROM
+    capacity_period cp
+    WHERE cp.cap_end_date < (SELECT MAX(cap_end_date) FROM capacity_period WHERE cap_start_date < current_date)
+    )
+    WHERE cf_rank = 1
+    )
+    ,
+    monthly_usage_cumulative AS
+    (
+    SELECT mu.usage_month,
+    cp.cap_start_date, cp.cap_start_date_bom, cp.cap_end_date, compute_used, auto_clustering_used, credits_used, cs_adj_used,
+    replication_used, pipe_used, materialized_view_used, search_optimization_used, su.storage_used,
+    ROUND(SUM(compute_used) OVER(PARTITION BY cap_start_date order by usage_month range between unbounded preceding and current row) ) AS compute_cumulative,
+    ROUND(SUM(cs_adj_used) OVER(PARTITION BY cap_start_date order by usage_month range between unbounded preceding and current row) ) AS cs_adj_cumulative,
+    ROUND(SUM(replication_used) OVER(PARTITION BY cap_start_date order by usage_month range between unbounded preceding and current row) ) AS replication_cumulative,
+    ROUND(SUM(auto_clustering_used) OVER(PARTITION BY cap_start_date order by usage_month range between unbounded preceding and current row) ) AS auto_clustering_cumulative,
+    ROUND(SUM(pipe_used) OVER(PARTITION BY cap_start_date order by usage_month range between unbounded preceding and current row) ) AS pipe_cumulative,
+    ROUND(SUM(materialized_view_used) OVER(PARTITION BY cap_start_date order by usage_month range between unbounded preceding and current row) ) AS materialized_view_cumulative,
+    ROUND(SUM(search_optimization_used) OVER(PARTITION BY cap_start_date order by usage_month range between unbounded preceding and current row) ) AS search_optimization_cumulative,
+    ROUND(SUM(storage_used) OVER(PARTITION BY cap_start_date order by usage_month range between unbounded preceding and current row) ) AS storage_cumulative,
+    capacity_amount, carryforward_month,
+    ROUND(capacity_amount ) AS capacity_total,
+    compute_cumulative + cs_adj_cumulative + replication_cumulative + auto_clustering_cumulative + pipe_cumulative + materialized_view_cumulative + search_optimization_cumulative + storage_cumulative AS
+    total_usage_cumulative,
+    ROUND(compute_used + cs_adj_used + replication_used + auto_clustering_used + pipe_used + materialized_view_used + search_optimization_used + storage_used) AS total_usage,
+    capacity_total - total_usage_cumulative AS capacity_remaining_raw
+    ,cs.start_date AS contract_start_date
+    ,cap_end_date - cap_start_date AS days_in_contract
+    ,capacity_total / days_in_contract AS expected_usage_per_day
+    ,IFNULL(LEAD(usage_month) OVER (ORDER BY usage_month), CURRENT_DATE) AS next_period_start_date
+    ,next_period_start_date - usage_month AS days_in_period
+    ,ROUND(expected_usage_per_day * days_in_period) AS expected_usage_per_period
+    FROM monthly_usage mu INNER JOIN capacity_period cp ON mu.usage_month >= cp.cap_start_date_bom AND mu.usage_month < cp.cap_end_date_bom
+    INNER JOIN contract_start cs ON mu.usage_month >= cs.start_date_bom
+    LEFT JOIN storage_usage su ON mu.usage_month = su.storage_usage_month --AND mu.account_name = su.account_name
+    ORDER BY 1
+    )
+    SELECT
+    usage_month AS "Usage Month",
+    MAX("CarryForward Amount") OVER (PARTITION BY carryforward_applied_to_month) AS cf_amt_all_months,
+    total_usage_cumulative AS "Usage Running Total",
+    capacity_remaining_raw + cf_amt_all_months AS "Capacity Remaining",
+    compute_cumulative AS "Compute RT",
+    cs_adj_cumulative AS "Cloud Svcs Adj RT",
+    replication_cumulative AS "Replication RT",
+    auto_clustering_cumulative AS "Auto Clustering RT",
+    pipe_cumulative AS "Pipe RT",
+    materialized_view_cumulative AS "Materialized View RT",
+    search_optimization_cumulative AS "Search Optimization RT",
+    storage_cumulative AS "Storage RT",
+    ROUND("Usage Running Total" * 100 / capacity_total ,2) AS "Percent Consumed",
+    100 - (ROUND("Usage Running Total" * 100 / capacity_total ,2)) AS "Percent Remaining",
+    RANK() OVER (ORDER BY usage_month desc) AS most_recent_date_rank,
+    CASE WHEN most_recent_date_rank = 1 THEN "Capacity Remaining" ELSE NULL END AS "Latest Capacity Remaining",
+    CASE WHEN most_recent_date_rank = 1 THEN "Usage Running Total" ELSE NULL END AS "Latest Usage Running Total",
+    CASE WHEN most_recent_date_rank = 1 THEN "Percent Consumed" ELSE NULL END AS "Latest Percent Consumed",
+    CASE WHEN most_recent_date_rank = 1 THEN "Percent Remaining" ELSE NULL END AS "Latest Percent Remaining"
+    ,days_in_period
+    ,ROUND(SUM(expected_usage_per_period) OVER(PARTITION BY cap_start_date order by usage_month range between unbounded preceding and current row) ) AS "Expected Usage RT"
+    ,expected_usage_per_period AS "Expected Usage"
+    ,total_usage AS "Total Usage"
+    ,total_usage - expected_usage_per_period AS "Expected Usage Delta"
+    ,"Usage Running Total" - "Expected Usage RT" AS "Expected Usage Delta RT"
+    ,compute_used AS "Compute Used"
+    ,cs_adj_used AS "CS Adj Used"
+    ,replication_used AS "Replication Used"
+    ,auto_clustering_used AS "Auto Clustering Used"
+    ,pipe_used AS "Pipe Used"
+    ,materialized_view_used AS "Materialized View Used"
+    ,search_optimization_used AS "Search Optimization Used"
+    ,storage_used AS "Storage Used"
+    --,x.*
+    FROM
+    (
+    SELECT muc.*, ccp.carryforward_applied_to_month, ccp.contract_number
+    ,LAG(capacity_remaining_raw) OVER (ORDER BY usage_month) AS "Prior Month Left"
+    ,CASE WHEN usage_month = carryforward_applied_to_month THEN "Prior Month Left" ELSE 0 END AS "CarryForward Amount"
+    FROM monthly_usage_cumulative muc
+    LEFT JOIN carryforward_capacity_periods ccp ON ccp.carryforward_applied_to_month <= muc.usage_month AND ccp.cap_start_date >= muc.contract_start_date
+    )x
+    WHERE days_in_period > 0
+    ;
+    """
+    
+    # Execute burndown query with the selected date
+    capacity_burndown_df = session.sql(burndown_sql).to_pandas()
+
+    # Create indicator charts in a 2x2 grid
+    indicator_fig = make_subplots(
+        rows=2, cols=2,
+        specs=[[{'type': 'indicator'}, {'type': 'indicator'}],
+               [{'type': 'indicator'}, {'type': 'indicator'}]],
+        subplot_titles=("Latest Capacity Remaining", "Latest Usage Running Total", 
+                       "Latest Percent Consumed", "Latest Percent Remaining")
+    )
+    
+    # Add indicators
+    indicator_fig.add_trace(
+        go.Indicator(
+            mode="number",
+            value=capacity_burndown_df['Latest Capacity Remaining'].max(),
+            number={'font': {'size': 40}},
+        ),
+        row=1, col=1
+    )
+    
+    indicator_fig.add_trace(
+        go.Indicator(
+            mode="number",
+            value=capacity_burndown_df['Latest Usage Running Total'].max(),
+            number={'font': {'size': 40}},
+        ),
+        row=1, col=2
+    )
+    
+    indicator_fig.add_trace(
+        go.Indicator(
+            mode="number+delta",
+            value=capacity_burndown_df['Latest Percent Consumed'].max(),
+            number={'font': {'size': 40}, 'suffix': "%"},
+        ),
+        row=2, col=1
+    )
+    
+    indicator_fig.add_trace(
+        go.Indicator(
+            mode="number+delta",
+            value=capacity_burndown_df['Latest Percent Remaining'].max(),
+            number={'font': {'size': 40}, 'suffix': "%"},
+        ),
+        row=2, col=2
+    )
+    
+    # Update layout
+    indicator_fig.update_layout(
+        height=400,
+        showlegend=False,
+    )
+    
+    # Display indicators
+    st.plotly_chart(indicator_fig, use_container_width=True)
+
+    
+    # Display indicator
+    st.plotly_chart(indicator_fig, use_container_width=True)
+
+
+    # Create bar chart
+    capacity_burndown_fig = go.Figure()
+    
+    # Add bars for Latest Capacity Remaining
+    capacity_burndown_fig.add_trace(go.Bar(
+        x=capacity_burndown_df['Usage Month'],
+        y=capacity_burndown_df['Latest Capacity Remaining'],
+        name='Latest Capacity Remaining'
+    ))
+    
+    # Add bars for Latest Usage Running Total
+    capacity_burndown_fig.add_trace(go.Bar(
+        x=capacity_burndown_df['Usage Month'],
+        y=capacity_burndown_df['Latest Usage Running Total'],
+        name='Latest Usage Running Total'
+    ))
+    
+    # Update layout
+    capacity_burndown_fig.update_layout(
+        title='Capacity Usage Over Time',
+        xaxis_title='Usage Month',
+        yaxis_title='Credits',
+        barmode='group'
+    )
+    
+    # Display the chart
+    st.plotly_chart(capacity_burndown_fig, use_container_width=True)
+

@@ -16,7 +16,7 @@ session = get_active_session()
      
 # Create sidebar with navigation
 st.sidebar.title("Navigation")
-page = st.sidebar.selectbox("Choose a page:", ["Overview", "Organization Billable Credits", "Settings"])
+page = st.sidebar.selectbox("Choose a page:", ["Overview", "Organization Billable Credits", "Organization Capacity Burndown"])
 
 # Write directly to the app
 if page == "Overview":
@@ -26,8 +26,10 @@ if page == "Overview":
 elif page == "Organization Billable Credits":
     from pages.organization_billable_credits import org_billable_credits
     org_billable_credits()
-        
-elif page == "Settings":
-    st.title("Settings ⚙️")
-    st.write("Configure your dashboard settings here")
+elif page == "Organization Capacity Burndown":
+    from pages.organization_capacity_burndown import org_capacity_burndown
+    org_capacity_burndown()
+
+
+
 
