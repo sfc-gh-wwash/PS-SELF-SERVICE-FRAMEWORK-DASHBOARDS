@@ -24,7 +24,7 @@ def org_billable_credits():
     THEN credits_used_compute ELSE 0 END AS credits_used_last_period,
     CASE WHEN start_time BETWEEN date_trunc('day', dateadd('day',-59,convert_timezone('UTC',current_timestamp()))) AND date_trunc('day', dateadd('day',-29,convert_timezone('UTC',current_timestamp())))
     THEN 0 ELSE credits_used_compute END AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE start_time BETWEEN date_trunc('day', dateadd('day',-59,convert_timezone('UTC',current_timestamp()))) AND current_timestamp()
     )
     SELECT
@@ -45,7 +45,7 @@ def org_billable_credits():
     current_timestamp() THEN average_failsafe_bytes ELSE 0 END) / POWER(2, 40) / 30) AS fs_storage_used_last_period,
     (SUM(CASE WHEN usage_date BETWEEN date_trunc('day', dateadd('day',-29,convert_timezone('UTC',current_timestamp()))) AND
     current_timestamp() THEN 0 ELSE average_failsafe_bytes END) / POWER(2, 40)/ 30) AS fs_storage_used_prior_period
-    FROM snowflake.organization_usage.database_storage_usage_history
+    FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE usage_date BETWEEN date_trunc('day', dateadd('day',-59,convert_timezone('UTC',current_timestamp()))) AND current_timestamp()
     ),
     stage_usage AS
@@ -55,7 +55,7 @@ def org_billable_credits():
     current_timestamp() THEN average_stage_bytes ELSE 0 END) / POWER(2, 40) / 30) AS stage_storage_used_last_period,
     (SUM(CASE WHEN usage_date BETWEEN date_trunc('day', dateadd('day',-29,convert_timezone('UTC',current_timestamp()))) AND
     current_timestamp() THEN 0 ELSE average_stage_bytes END) / POWER(2, 40)/ 30) AS stage_storage_used_prior_period
-    FROM snowflake.organization_usage.stage_storage_usage_history
+    FROM HUB_DB.HUB_CONS_SC.STAGE_STORAGE_USAGE_HISTORY_ALL
     WHERE usage_date BETWEEN date_trunc('day', dateadd('day',-59,convert_timezone('UTC',current_timestamp()))) AND current_timestamp()
     )
     SELECT
@@ -76,7 +76,7 @@ def org_billable_credits():
     SELECT
     DATE_TRUNC('day', convert_timezone('UTC',start_time))::DATE usage_week
     ,ROUND(SUM(credits_used_compute),0) AS "Compute Credits Used"
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE start_time BETWEEN date_trunc('day', dateadd('day',-365,convert_timezone('UTC',current_timestamp()))) AND current_timestamp()
     GROUP BY 1
     ORDER BY 1;
@@ -88,7 +88,7 @@ def org_billable_credits():
     ,((sum(average_database_bytes) / POWER(2, 40)) + (sum(average_failsafe_bytes) / POWER(2, 40))) / 30 AS storage_tb
     ,(sum(average_database_bytes) / POWER(2, 40)) / 30 AS db_storage_tb
     ,(sum(average_failsafe_bytes) / POWER(2, 40)) / 30 AS failsafe_storage_tb
-    FROM snowflake.organization_usage.database_storage_usage_history
+    FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE usage_date BETWEEN convert_timezone('UTC',date_trunc('week', dateadd('week',-60,current_timestamp()))) AND
     current_timestamp()
     GROUP BY 1
@@ -117,7 +117,7 @@ def org_billable_credits():
     SELECT DATE_TRUNC('month', convert_timezone('UTC',usage_date))::DATE usage_month,
     service_type,
     ROUND(SUM(credits_used_COMPUTE)) AS credits_used
-    FROM snowflake.organization_usage.METERING_DAILY_HISTORY mdh
+    FROM HUB_DB.HUB_CONS_SC.METERING_DAILY_HISTORY_ALL mdh
     WHERE usage_date BETWEEN convert_timezone('UTC',date_trunc('month', dateadd('month',-12,current_timestamp()))) AND current_timestamp()
     GROUP BY ALL;
     """
@@ -128,7 +128,7 @@ def org_billable_credits():
     SELECT DATE_TRUNC('month', convert_timezone('UTC',usage_date))::DATE usage_month,
     service_type,
     ROUND(SUM(credits_used_COMPUTE)) AS credits_used
-    FROM snowflake.organization_usage.METERING_DAILY_HISTORY mdh
+    FROM HUB_DB.HUB_CONS_SC.METERING_DAILY_HISTORY_ALL mdh
     WHERE usage_date BETWEEN convert_timezone('UTC',date_trunc('month', dateadd('month',-12,current_timestamp()))) AND current_timestamp()
     GROUP BY ALL
     )

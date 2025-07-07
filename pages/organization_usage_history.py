@@ -18,7 +18,7 @@ def org_usage_history():
     # Get account names
     acct_name_sql = """
     SELECT DISTINCT account_name 
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     ORDER BY account_name;
     """
     
@@ -54,7 +54,7 @@ def org_usage_history():
     THEN credits_used_compute ELSE 0 END AS credits_used_last_period,
     CASE WHEN local_start_time BETWEEN date_trunc('day', dateadd('day',-29,local_cts)) AND local_cts
     THEN 0 ELSE credits_used_compute END AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('day', dateadd('day',-59,local_cts)) AND local_cts AND
     (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     )
@@ -72,13 +72,13 @@ def org_usage_history():
     (
     SELECT
     convert_timezone('America/Chicago',current_timestamp()) AS local_cts,
-    convert_timezone('America/Chicago',start_time) AS local_start_time,
-    CASE WHEN local_start_time BETWEEN date_trunc('day', dateadd('day',-29,local_cts)) AND local_cts
-    THEN credits_used_compute ELSE 0 END AS credits_used_last_period,
-    CASE WHEN local_start_time BETWEEN date_trunc('day', dateadd('day',-29,local_cts)) AND local_cts
-    THEN 0 ELSE credits_used_compute END AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
-    WHERE local_start_time BETWEEN date_trunc('day', dateadd('day',-59,local_cts)) AND local_cts AND
+    convert_timezone('America/Chicago',start_time) AS local_usage_date,
+    CASE WHEN local_usage_date BETWEEN date_trunc('day', dateadd('day',-29,local_cts)) AND
+    current_timestamp() THEN credits_used ELSE 0 END AS credits_used_last_period,
+    CASE WHEN local_usage_date BETWEEN date_trunc('day', dateadd('day',-29,local_cts)) AND
+    current_timestamp() THEN 0 ELSE credits_used END AS credits_used_prior_period
+    FROM HUB_DB.HUB_CONS_SC.PIPE_USAGE_HISTORY_ALL
+    WHERE local_usage_date BETWEEN date_trunc('day', dateadd('day',-59,local_cts)) AND local_cts AND
     (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     )
     SELECT
@@ -95,13 +95,13 @@ def org_usage_history():
     SELECT
     convert_timezone('America/Chicago',current_timestamp()) AS local_cts,
     convert_timezone('America/Chicago',usage_date) AS local_usage_date,
-    account_name, region, organization_name,
+    account_name, region_name, organization_name,
     average_database_bytes,
     CASE WHEN local_usage_date BETWEEN date_trunc('day', dateadd('day',-29,local_cts)) AND
     local_cts THEN average_database_bytes ELSE 0 END AS storage_last_period,
     CASE WHEN local_usage_date BETWEEN date_trunc('day', dateadd('day',-29,local_cts)) AND
     local_cts THEN 0 ELSE average_database_bytes END AS storage_prior_period
-     FROM snowflake.organization_usage.database_storage_usage_history
+     FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('day', dateadd('day',-59,local_cts)) AND
     local_cts AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     ),
@@ -131,7 +131,7 @@ def org_usage_history():
     current_timestamp() THEN credits_used_compute ELSE 0 END AS credits_used_last_period,
     CASE WHEN local_start_time BETWEEN date_trunc('day', dateadd('day',-6,local_cts)) AND
     current_timestamp() THEN 0 ELSE credits_used_compute END AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('day', dateadd('day',-13,local_cts)) AND local_cts AND
     (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     )
@@ -148,12 +148,12 @@ def org_usage_history():
     (
     SELECT
     convert_timezone('America/Chicago',current_timestamp()) AS local_cts,
-    convert_timezone('America/Chicago',usage_date) AS local_usage_date,
+    convert_timezone('America/Chicago',start_time) AS local_usage_date,
     CASE WHEN local_usage_date BETWEEN date_trunc('day', dateadd('day',-6,local_cts)) AND
     current_timestamp() THEN credits_used ELSE 0 END AS credits_used_last_period,
     CASE WHEN local_usage_date BETWEEN date_trunc('day', dateadd('day',-6,local_cts)) AND
     current_timestamp() THEN 0 ELSE credits_used END AS credits_used_prior_period
-    FROM snowflake.organization_usage.pipe_usage_history
+    FROM HUB_DB.HUB_CONS_SC.PIPE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('day', dateadd('day',-13,local_cts)) AND local_cts AND
     (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     )
@@ -171,13 +171,13 @@ def org_usage_history():
     SELECT
     convert_timezone('America/Chicago',current_timestamp()) AS local_cts,
     convert_timezone('America/Chicago',usage_date) AS local_usage_date,
-    account_name, region, organization_name,
+    account_name, region_name, organization_name,
     average_database_bytes,
     CASE WHEN local_usage_date BETWEEN date_trunc('day', dateadd('day',-6,local_cts)) AND local_cts
     THEN average_database_bytes ELSE 0 END AS storage_last_period,
     CASE WHEN local_usage_date BETWEEN date_trunc('day', dateadd('day',-6,local_cts)) AND local_cts
     THEN 0 ELSE average_database_bytes END AS storage_prior_period
-    FROM snowflake.organization_usage.database_storage_usage_history
+    FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('day', dateadd('day',-13,local_cts)) AND local_cts AND
     (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     ),
@@ -207,7 +207,7 @@ def org_usage_history():
     current_timestamp() THEN credits_used_compute ELSE 0 END AS credits_used_last_period,
     CASE WHEN local_start_time BETWEEN date_trunc('day', dateadd('day',-2,local_cts)) AND
     current_timestamp() THEN 0 ELSE credits_used_compute END AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('day', dateadd('day',-2,local_cts)) AND local_cts AND
     (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     )
@@ -223,17 +223,15 @@ def org_usage_history():
     WITH usage_detail_rows AS
     (
     SELECT
-    convert_timezone('America/Los_Angeles',current_timestamp()) AS local_cts,
-    convert_timezone('America/Los_Angeles',start_time) AS local_start_time,
-    CASE WHEN local_start_time >= date_trunc('day', dateadd('day',-1,local_cts)) AND local_start_time <
-    date_trunc('day', dateadd('day',0,local_cts))THEN credits_used_compute ELSE 0 END AS
-    credits_used_last_period,
-    CASE WHEN local_start_time >= date_trunc('day', dateadd('day',-1,local_cts)) AND local_start_time <
-    date_trunc('day', dateadd('day',0,local_cts)) THEN 0 ELSE credits_used_compute END AS
-    credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
-    WHERE local_start_time >= date_trunc('day', dateadd('day',-2,local_cts)) AND local_start_time <
-    date_trunc('day', dateadd('day',0,local_cts)) AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    convert_timezone('America/Chicago',current_timestamp()) AS local_cts,
+    convert_timezone('America/Chicago',start_time) AS local_usage_date,
+    CASE WHEN local_usage_date BETWEEN date_trunc('day', dateadd('day',-1,local_cts)) AND
+    current_timestamp() THEN credits_used ELSE 0 END AS credits_used_last_period,
+    CASE WHEN local_usage_date BETWEEN date_trunc('day', dateadd('day',-2,local_cts)) AND
+    current_timestamp() THEN 0 ELSE credits_used END AS credits_used_prior_period
+    FROM HUB_DB.HUB_CONS_SC.PIPE_USAGE_HISTORY_ALL
+    WHERE local_usage_date BETWEEN date_trunc('day', dateadd('day',-2,local_cts)) AND local_cts AND
+    (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     )
     SELECT
     ROUND(SUM(credits_used_last_period),0) AS credits_used_last_period,
@@ -249,7 +247,7 @@ def org_usage_history():
     SELECT
     convert_timezone('America/Chicago',current_timestamp()) AS local_cts,
     convert_timezone('America/Chicago',usage_date) AS local_usage_date,
-    account_name, region, organization_name,
+    account_name, region_name, organization_name,
     average_database_bytes,
     CASE WHEN local_usage_date >= date_trunc('day', dateadd('day',-1,local_cts)) AND local_usage_date <
     date_trunc('day', dateadd('day',0,local_cts))THEN average_database_bytes ELSE 0 END AS
@@ -257,7 +255,7 @@ def org_usage_history():
     CASE WHEN local_usage_date >= date_trunc('day', dateadd('day',-1,local_cts)) AND local_usage_date <
     date_trunc('day', dateadd('day',0,local_cts)) THEN 0 ELSE average_database_bytes END AS
     storage_prior_period
-    FROM snowflake.organization_usage.database_storage_usage_history
+    FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE local_usage_date >= date_trunc('day', dateadd('day',-2,local_cts)) AND local_usage_date <
     date_trunc('day', dateadd('day',0,local_cts)) AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     ),
@@ -287,7 +285,7 @@ def org_usage_history():
     ,account_name
     ,credits_used_compute
     ,credits_used_cloud_services
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('month', dateadd('month',-5,local_cts)) AND local_cts
     AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     )
@@ -311,7 +309,7 @@ def org_usage_history():
     ,account_name
     ,credits_used_compute
     ,credits_used_cloud_services
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('week', dateadd('week',-10,local_cts)) AND local_cts
     AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     )
@@ -335,7 +333,7 @@ def org_usage_history():
     ,account_name
     ,credits_used_compute
     ,credits_used_cloud_services
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('week', dateadd('week',-10,local_cts)) AND local_cts
     AND  (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     )
@@ -355,15 +353,15 @@ def org_usage_history():
     (
     SELECT
     convert_timezone('America/Chicago',current_date()) AS local_cdate,
-    convert_timezone('America/Chicago',usage_date) AS local_usage_date,
+    convert_timezone('America/Chicago',start_time) AS local_usage_date,
     account_name,
-    pipe_name
-    usage_date,
-    DATE_TRUNC('month', usage_date)::DATE usage_month,
+    pipe_name,
+    start_time as usage_date,
+    DATE_TRUNC('month', start_time)::DATE usage_month,
     credits_used,
     bytes_inserted,
     files_inserted
-    FROM snowflake.organization_usage.pipe_usage_history
+    FROM HUB_DB.HUB_CONS_SC.PIPE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('month', dateadd('month',-6,local_cdate)) AND
     local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     )
@@ -383,15 +381,15 @@ def org_usage_history():
     (
     SELECT
     convert_timezone('America/Chicago',current_date()) AS local_cdate,
-    convert_timezone('America/Chicago',usage_date) AS local_usage_date,
+    convert_timezone('America/Chicago',start_time) AS local_usage_date,
     account_name,
-    pipe_name
-    usage_date,
-    DATE_TRUNC('week', usage_date)::DATE usage_week,
+    pipe_name,
+    start_time as usage_date,
+    DATE_TRUNC('week', start_time)::DATE usage_week,
     credits_used,
     bytes_inserted,
     files_inserted
-    FROM snowflake.organization_usage.pipe_usage_history
+    FROM HUB_DB.HUB_CONS_SC.PIPE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('week', dateadd('week',-10,local_cdate)) AND
     local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     )
@@ -411,15 +409,15 @@ def org_usage_history():
     (
     SELECT
     convert_timezone('America/Chicago',current_date()) AS local_cdate,
-    convert_timezone('America/Chicago',usage_date) AS local_usage_date,
+    convert_timezone('America/Chicago',start_time) AS local_usage_date,
     account_name,
-    pipe_name
-    usage_date,
-    DATE_TRUNC('day', usage_date)::DATE usage_day,
+    pipe_name,
+    start_time as usage_date,
+    DATE_TRUNC('day', start_time)::DATE usage_day,
     credits_used,
     bytes_inserted,
     files_inserted
-    FROM snowflake.organization_usage.pipe_usage_history
+    FROM HUB_DB.HUB_CONS_SC.PIPE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('day', dateadd('day',-56,local_cdate)) AND local_cdate
     AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     )
@@ -445,7 +443,7 @@ def org_usage_history():
     usage_date,
     SUM(average_database_bytes ) AS total_db_bytes_per_day,
     SUM(average_failsafe_bytes ) AS total_fs_bytes_per_day
-    FROM snowflake.organization_usage.database_storage_usage_history
+    FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('month', dateadd('month',-6,local_cdate)) AND
     local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     GROUP BY usage_date, account_name
@@ -473,7 +471,7 @@ def org_usage_history():
     usage_date,
     SUM(average_database_bytes ) AS total_db_bytes_per_day,
     SUM(average_failsafe_bytes ) AS total_fs_bytes_per_day
-    FROM snowflake.organization_usage.database_storage_usage_history
+    FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('week', dateadd('week',-10,local_cdate)) AND
     local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     GROUP BY usage_date, account_name
@@ -501,7 +499,7 @@ def org_usage_history():
     usage_date,
     SUM(average_database_bytes ) AS total_db_bytes_per_day,
     SUM(average_failsafe_bytes ) AS total_fs_bytes_per_day
-    FROM snowflake.organization_usage.database_storage_usage_history
+    FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('week', dateadd('week',-10,local_cdate)) AND
     local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
     GROUP BY usage_date, account_name

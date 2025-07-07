@@ -16,7 +16,7 @@ session = get_active_session()
 def org_credit_usage():
     acct_name_sql = """
     SELECT DISTINCT account_name
-    FROM SNOWFLAKE.ORGANIZATION_USAGE.METERING_DAILY_HISTORY
+    FROM HUB_DB.HUB_CONS_SC.METERING_DAILY_HISTORY_ALL
     WHERE usage_date > CURRENT_DATE - 90
     ORDER BY 1;
     """
@@ -40,7 +40,7 @@ def org_credit_usage():
     credits_used_cloud_services ELSE 0 END AS credits_used_last_period,
     CASE WHEN local_start_time BETWEEN date_trunc('day', dateadd('day',-29,local_cts)) AND local_cts THEN 0 ELSE credits_used_compute +
     credits_used_cloud_services END AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('day', dateadd('day',-59,local_cts)) AND local_cts AND account_name = '""" + selected_acct + """'
     )
     SELECT
@@ -60,7 +60,7 @@ def org_credit_usage():
     AS credits_used_last_period,
     CASE WHEN local_start_time BETWEEN date_trunc('day', dateadd('day',-29,local_cts)) AND local_cts THEN 0 ELSE credits_used_compute END
     AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('day', dateadd('day',-59,local_cts)) AND local_cts AND account_name = '""" + selected_acct + """'
     )
     SELECT
@@ -81,7 +81,7 @@ def org_credit_usage():
     END AS credits_used_last_period,
     CASE WHEN local_start_time BETWEEN date_trunc('day', dateadd('day',-29,local_cts)) AND local_cts THEN 0 ELSE credits_used_cloud_services
     END AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('day', dateadd('day',-59,local_cts)) AND local_cts AND account_name = '""" + selected_acct + """'
     )
     SELECT
@@ -102,7 +102,7 @@ def org_credit_usage():
     credits_used_cloud_services ELSE 0 END AS credits_used_last_period,
     CASE WHEN local_start_time BETWEEN date_trunc('day', dateadd('day',-6,local_cts)) AND local_cts THEN 0 ELSE credits_used_compute +
     credits_used_cloud_services END AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('day', dateadd('day',-13,local_cts)) AND local_cts AND account_name = '""" + selected_acct + """'
     )
     SELECT
@@ -122,7 +122,7 @@ def org_credit_usage():
     ELSE 0 END AS credits_used_last_period,
     CASE WHEN local_start_time BETWEEN date_trunc('day', dateadd('day',-6,local_cts)) AND current_timestamp() THEN 0 ELSE
     credits_used_compute END AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('day', dateadd('day',-13,local_cts)) AND local_cts AND account_name = '""" + selected_acct + """'
     )
     SELECT
@@ -143,7 +143,7 @@ def org_credit_usage():
     END AS credits_used_last_period,
     CASE WHEN local_start_time BETWEEN date_trunc('day', dateadd('day',-6,local_cts)) AND local_cts THEN 0 ELSE credits_used_cloud_services
     END AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('day', dateadd('day',-13,local_cts)) AND local_cts AND account_name = '""" + selected_acct + """'
     )
     SELECT
@@ -164,7 +164,7 @@ def org_credit_usage():
     dateadd('day',0,local_cts))THEN credits_used_compute + credits_used_cloud_services ELSE 0 END AS credits_used_last_period,
     CASE WHEN local_start_time >= date_trunc('day', dateadd('day',-1,local_cts)) AND local_start_time < date_trunc('day',
     dateadd('day',0,local_cts)) THEN 0 ELSE credits_used_compute + credits_used_cloud_services END AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time >= date_trunc('day', dateadd('day',-2,local_cts)) AND local_start_time < date_trunc('day', dateadd('day',0,local_cts))
     AND account_name = '""" + selected_acct + """'
     )
@@ -186,7 +186,7 @@ def org_credit_usage():
     dateadd('day',0,local_cts))THEN credits_used_compute ELSE 0 END AS credits_used_last_period,
     CASE WHEN local_start_time >= date_trunc('day', dateadd('day',-1,local_cts)) AND local_start_time < date_trunc('day',
     dateadd('day',0,local_cts)) THEN 0 ELSE credits_used_compute END AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time >= date_trunc('day', dateadd('day',-2,local_cts)) AND local_start_time < date_trunc('day', dateadd('day',0,local_cts))
     AND account_name = '""" + selected_acct + """'
     )
@@ -207,7 +207,7 @@ def org_credit_usage():
     dateadd('day',0,local_cts))THEN credits_used_cloud_services ELSE 0 END AS credits_used_last_period,
     CASE WHEN local_start_time >= date_trunc('day', dateadd('day',-1,local_cts)) AND local_start_time < date_trunc('day',
     dateadd('day',0,local_cts)) THEN 0 ELSE credits_used_cloud_services END AS credits_used_prior_period
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time >= date_trunc('day', dateadd('day',-2,local_cts)) AND local_start_time < date_trunc('day', dateadd('day',0,local_cts))
     AND account_name = '""" + selected_acct + """'
     )
@@ -227,7 +227,7 @@ def org_credit_usage():
     DATE_TRUNC('month', local_start_time)::DATE usage_month
     ,credits_used_compute
     ,credits_used_cloud_services
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('month', dateadd('month',-6,local_cts)) AND local_cts AND account_name = '""" + selected_acct + """'
     )
     SELECT usage_month
@@ -248,7 +248,7 @@ def org_credit_usage():
     DATE_TRUNC('week', local_start_time)::DATE usage_week
     ,credits_used_compute
     ,credits_used_cloud_services
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('week', dateadd('week',-27,local_cts)) AND local_cts AND account_name = '""" + selected_acct + """'
     )
     SELECT usage_week
@@ -270,7 +270,7 @@ def org_credit_usage():
     DATE_TRUNC('day', local_start_time)::DATE usage_day
     ,credits_used_compute
     ,credits_used_cloud_services
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN local_begin_date AND local_cts AND account_name = '""" + selected_acct + """'
     )
     SELECT usage_day
@@ -285,7 +285,7 @@ def org_credit_usage():
     t10_wh_credit_by_mo_sql = """
     WITH wh_list AS
     -- Configure to how many months back you'd like the top WH USage to be based on
-    (SELECT warehouse_name, ROUND(SUM(credits_used),0) credits_used FROM snowflake.organization_usage.warehouse_metering_history
+    (SELECT warehouse_name, ROUND(SUM(credits_used),0) credits_used FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE
     start_time BETWEEN date_trunc('month', dateadd('month',-6,current_timestamp())) AND current_timestamp() AND account_name = '""" + selected_acct + """'
     GROUP BY warehouse_name
@@ -299,7 +299,7 @@ def org_credit_usage():
     warehouse_name,
     DATE_TRUNC('month', local_start_time)::DATE usage_month
     ,credits_used, credits_used_compute,credits_used_cloud_services
-    FROM snowflake.organization_usage.warehouse_metering_history
+    FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('month', dateadd('month',-6,local_cts)) AND local_cts AND account_name = '""" + selected_acct + """'
     AND warehouse_name in
     (SELECT warehouse_name FROM wh_list
