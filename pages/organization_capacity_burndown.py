@@ -254,10 +254,6 @@ def org_capacity_burndown():
     # Display indicators
     st.plotly_chart(indicator_fig, use_container_width=True)
 
-    
-    # Display indicator
-    st.plotly_chart(indicator_fig, use_container_width=True)
-
 
     # Create bar chart
     capacity_burndown_fig = go.Figure()

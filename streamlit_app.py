@@ -16,7 +16,8 @@ session = get_active_session()
      
 # Create sidebar with navigation
 st.sidebar.title("Navigation")
-page = st.sidebar.selectbox("Choose a page:", ["Overview", "Organization Billable Credits", "Organization Capacity Burndown"])
+page = st.sidebar.selectbox("Choose a page:", ["Overview", "Organization Billable Credits", "Organization Capacity Burndown","Organization Credit Usage History",
+                                               "Organization Usage History by Object","Organization Usage History"])
 
 # Write directly to the app
 if page == "Overview":
@@ -29,7 +30,14 @@ elif page == "Organization Billable Credits":
 elif page == "Organization Capacity Burndown":
     from pages.organization_capacity_burndown import org_capacity_burndown
     org_capacity_burndown()
-
-
+elif page == "Organization Credit Usage History":
+    from pages.organization_credit_usage_history import org_credit_usage
+    org_credit_usage()
+elif page == "Organization Usage History by Object":
+    from pages.organization_usage_history_by_object import org_usage_history_by_object
+    org_usage_history_by_object()
+elif page == "Organization Usage History":
+    from pages.organization_usage_history import org_usage_history
+    org_usage_history()
 
 
