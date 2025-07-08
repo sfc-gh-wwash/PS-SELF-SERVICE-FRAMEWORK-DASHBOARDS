@@ -18,7 +18,6 @@ def org_capacity_burndown():
     SELECT start_date
     FROM snowflake.ORGANIZATION_USAGE.CONTRACT_ITEMS
     WHERE start_date < CURRENT_DATE
-    UNION select '2023-03-10'::date
     ORDER BY start_date DESC LIMIT 2;
     """
     
@@ -76,11 +75,11 @@ def org_capacity_burndown():
     SELECT
     DATE_TRUNC('month', usage_date)::DATE AS storage_usage_month,
     --DATE_TRUNC('day', usage_date)::DATE AS storage_usage_month,
-    ((SUM(average_bytes) / POWER(2, 40)) / POWER(2, 40)) / 30 AS storage_tb,
-    ROUND(SUM(credits) * avg(ppc.effective_rate)) AS storage_used
-    FROM snowflake.organization_usage.storage_daily_history sdh
+    ((SUM(average_database_bytes + average_failsafe_bytes) / POWER(2, 40)) / POWER(2, 40)) / 30 AS storage_tb,
+    ROUND(storage_tb * avg(ppc.effective_rate)) AS storage_used
+    FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL sdh
     LEFT JOIN SNOWFLAKE.ORGANIZATION_USAGE.rate_sheet_daily ppc ON usage_date = ppc.date AND ppc.usage_type = 'compute' AND ppc.account_name = sdh.account_name
-    GROUP BY 1
+    GROUP BY ALL
     )
     ,
     monthly_usage AS
@@ -96,7 +95,7 @@ def org_capacity_burndown():
     ROUND(SUM(CASE WHEN mdh.service_type = 'PIPE' THEN credits_used_compute * ppc.effective_rate ELSE 0 END)) AS pipe_used,
     ROUND(SUM(CASE WHEN mdh.service_type = 'MATERIALIZED_VIEW' THEN credits_used_compute * ppc.effective_rate ELSE 0 END)) AS materialized_view_used,
     ROUND(SUM(CASE WHEN mdh.service_type = 'SEARCH_OPTIMIZATION' THEN credits_used_compute * ppc.effective_rate ELSE 0 END)) AS search_optimization_used
-    FROM SNOWFLAKE.ORGANIZATION_USAGE.METERING_DAILY_HISTORY mdh
+    FROM HUB_DB.HUB_CONS_SC.METERING_DAILY_HISTORY_ALL mdh
     LEFT JOIN contract_start cs ON cs.start_date_bom >= DATE_TRUNC('month', convert_timezone('UTC',usage_date))::DATE
     LEFT JOIN SNOWFLAKE.ORGANIZATION_USAGE.rate_sheet_daily ppc ON mdh.usage_date = ppc.date AND ppc.usage_type = 'compute' AND ppc.account_name = mdh.account_name
     WHERE USAGE_DATE < DATE_TRUNC('day', CONVERT_TIMEZONE('UTC', CURRENT_TIMESTAMP))
