@@ -56,7 +56,7 @@ def org_usage_history():
     THEN 0 ELSE credits_used_compute END AS credits_used_prior_period
     FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('day', dateadd('day',-59,local_cts)) AND local_cts AND
-    (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     )
     SELECT
     ROUND(SUM(credits_used_last_period),0) AS credits_used_last_period,
@@ -79,7 +79,7 @@ def org_usage_history():
     current_timestamp() THEN 0 ELSE credits_used END AS credits_used_prior_period
     FROM HUB_DB.HUB_CONS_SC.PIPE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('day', dateadd('day',-59,local_cts)) AND local_cts AND
-    (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     )
     SELECT
     ROUND(SUM(credits_used_last_period),0) AS credits_used_last_period,
@@ -103,7 +103,7 @@ def org_usage_history():
     local_cts THEN 0 ELSE average_database_bytes END AS storage_prior_period
      FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('day', dateadd('day',-59,local_cts)) AND
-    local_cts AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    local_cts AND (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     ),
     storage_by_account_and_day AS
     (
@@ -133,7 +133,7 @@ def org_usage_history():
     current_timestamp() THEN 0 ELSE credits_used_compute END AS credits_used_prior_period
     FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('day', dateadd('day',-13,local_cts)) AND local_cts AND
-    (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     )
     SELECT
     ROUND(SUM(credits_used_last_period),0) AS credits_used_last_period,
@@ -155,7 +155,7 @@ def org_usage_history():
     current_timestamp() THEN 0 ELSE credits_used END AS credits_used_prior_period
     FROM HUB_DB.HUB_CONS_SC.PIPE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('day', dateadd('day',-13,local_cts)) AND local_cts AND
-    (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     )
     SELECT
     ROUND(SUM(credits_used_last_period),0) AS credits_used_last_period,
@@ -179,7 +179,7 @@ def org_usage_history():
     THEN 0 ELSE average_database_bytes END AS storage_prior_period
     FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('day', dateadd('day',-13,local_cts)) AND local_cts AND
-    (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     ),
     storage_by_account_and_day AS
     (
@@ -209,7 +209,7 @@ def org_usage_history():
     current_timestamp() THEN 0 ELSE credits_used_compute END AS credits_used_prior_period
     FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('day', dateadd('day',-2,local_cts)) AND local_cts AND
-    (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     )
     SELECT
     ROUND(SUM(credits_used_last_period),0) AS credits_used_last_period,
@@ -231,7 +231,7 @@ def org_usage_history():
     current_timestamp() THEN 0 ELSE credits_used END AS credits_used_prior_period
     FROM HUB_DB.HUB_CONS_SC.PIPE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('day', dateadd('day',-2,local_cts)) AND local_cts AND
-    (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     )
     SELECT
     ROUND(SUM(credits_used_last_period),0) AS credits_used_last_period,
@@ -257,7 +257,7 @@ def org_usage_history():
     storage_prior_period
     FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE local_usage_date >= date_trunc('day', dateadd('day',-2,local_cts)) AND local_usage_date <
-    date_trunc('day', dateadd('day',0,local_cts)) AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    date_trunc('day', dateadd('day',0,local_cts)) AND (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     ),
     storage_by_account_and_day AS
     (
@@ -287,7 +287,7 @@ def org_usage_history():
     ,credits_used_cloud_services
     FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('month', dateadd('month',-5,local_cts)) AND local_cts
-    AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    AND (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     )
     SELECT usage_month, account_name
     ,ROUND(SUM(credits_used_compute),0) AS "Compute Credits"
@@ -311,7 +311,7 @@ def org_usage_history():
     ,credits_used_cloud_services
     FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('week', dateadd('week',-10,local_cts)) AND local_cts
-    AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    AND (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     )
     SELECT usage_week, account_name
     ,ROUND(SUM(credits_used_compute),0) AS "Compute Credits"
@@ -335,7 +335,7 @@ def org_usage_history():
     ,credits_used_cloud_services
     FROM HUB_DB.HUB_CONS_SC.WAREHOUSE_METERING_HISTORY_ALL
     WHERE local_start_time BETWEEN date_trunc('week', dateadd('week',-10,local_cts)) AND local_cts
-    AND  (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    AND (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     )
     SELECT usage_week, account_name
     ,ROUND(SUM(credits_used_compute),0) AS "Compute Credits"
@@ -363,7 +363,7 @@ def org_usage_history():
     files_inserted
     FROM HUB_DB.HUB_CONS_SC.PIPE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('month', dateadd('month',-6,local_cdate)) AND
-    local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     )
     SELECT
     usage_month, account_name,
@@ -391,7 +391,7 @@ def org_usage_history():
     files_inserted
     FROM HUB_DB.HUB_CONS_SC.PIPE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('week', dateadd('week',-10,local_cdate)) AND
-    local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     )
     SELECT
     usage_week, account_name,
@@ -419,7 +419,7 @@ def org_usage_history():
     files_inserted
     FROM HUB_DB.HUB_CONS_SC.PIPE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('day', dateadd('day',-56,local_cdate)) AND local_cdate
-    AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    AND (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     )
     SELECT
     usage_day, account_name,
@@ -445,7 +445,7 @@ def org_usage_history():
     SUM(average_failsafe_bytes ) AS total_fs_bytes_per_day
     FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('month', dateadd('month',-6,local_cdate)) AND
-    local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     GROUP BY usage_date, account_name
     )
     -- Get the Average Daily per month and account
@@ -473,7 +473,7 @@ def org_usage_history():
     SUM(average_failsafe_bytes ) AS total_fs_bytes_per_day
     FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('week', dateadd('week',-10,local_cdate)) AND
-    local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     GROUP BY usage_date, account_name
     )
     -- Get the Average Daily per month and account
@@ -501,7 +501,7 @@ def org_usage_history():
     SUM(average_failsafe_bytes ) AS total_fs_bytes_per_day
     FROM HUB_DB.HUB_CONS_SC.DATABASE_STORAGE_USAGE_HISTORY_ALL
     WHERE local_usage_date BETWEEN date_trunc('week', dateadd('week',-10,local_cdate)) AND
-    local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' = {selected_acct_str})
+    local_cdate AND (account_name IN ({selected_acct_str}) or 'ALL' IN ({selected_acct_str}))
     GROUP BY usage_date, account_name
     )
     -- Get the Average Daily per month and account
