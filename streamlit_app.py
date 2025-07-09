@@ -13,6 +13,14 @@ import pandas as pd
 
 from plotly.subplots import make_subplots
 session = get_active_session()
+
+# To create a new page, create a new file in the pages directory, use the template new_page_template.py
+# add the name of the page to the page list 
+# page = st.sidebar.selectbox("Choose a page:", ["Overview", "Organization Billable Credits",..."New Page")
+# then add a new elif condition that imports the page and class
+# elif page == "New Page":
+#     from pages.new_page import new_page
+#     new_page()
      
 # Create sidebar with navigation
 st.sidebar.title("Navigation")
